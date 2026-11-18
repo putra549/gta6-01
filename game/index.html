@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marlowe Bay — an open-world crime game</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a0f1e; font-family: "Segoe UI", Arial, sans-serif; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .hidden { display: none !important; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; }
+  #topleft { position: absolute; top: 14px; left: 16px; text-shadow: 0 2px 4px rgba(0,0,0,.55); }
+  #healthwrap { width: 210px; height: 15px; background: rgba(10,8,14,.62); border: 2px solid rgba(255,255,255,.75); border-radius: 8px; overflow: hidden; }
+  #healthbar { height: 100%; width: 100%; background: linear-gradient(90deg, #ff5d47, #ffb347); transition: width .15s; }
+  #armourline { margin-top: 4px; font-size: 12px; letter-spacing: .12em; opacity: .9; }
+  #cash { margin-top: 2px; font-size: 30px; font-weight: 800; color: #7dff8a; letter-spacing: .02em; }
+  #cash small { font-size: 13px; color: #dfffe2; font-weight: 600; letter-spacing: .14em; }
+  #topright { position: absolute; top: 12px; right: 18px; text-align: right; text-shadow: 0 2px 5px rgba(0,0,0,.6); }
+  #stars { font-size: 30px; letter-spacing: 3px; color: rgba(255,255,255,.28); line-height: 1; }
+  #stars .lit { color: #ffd23e; text-shadow: 0 0 9px rgba(255,190,40,.85); }
+  #wantedlabel { font-size: 11px; letter-spacing: .22em; margin-top: 3px; opacity: .85; }
+  #clock { font-size: 13px; letter-spacing: .18em; margin-top: 2px; opacity: .8; }
+  #objective { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); max-width: 620px; text-align: center;
+    background: rgba(12,8,18,.55); border: 1px solid rgba(255,210,120,.5); border-radius: 10px; padding: 8px 18px;
+    font-size: 16px; font-weight: 600; letter-spacing: .02em; }
+  #objective b { color: #ffd23e; }
+  #objective .timer { color: #ff9d5c; font-weight: 800; }
+  #minimapwrap { position: absolute; left: 16px; bottom: 16px; width: 192px; height: 192px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.8); overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,.5); background: #20303a; }
+  #minimap { width: 192px; height: 192px; display: block; }
+  #bottomright { position: absolute; right: 18px; bottom: 16px; text-align: right; text-shadow: 0 2px 4px rgba(0,0,0,.6); }
+  #speedo { font-size: 40px; font-weight: 800; line-height: 1; }
+  #speedo small { font-size: 13px; font-weight: 600; letter-spacing: .18em; opacity: .85; }
+  #weapon { margin-top: 4px; font-size: 15px; font-weight: 700; letter-spacing: .14em; }
+  #weapon .ammo { color: #ffd23e; }
+  #carname { font-size: 13px; letter-spacing: .2em; opacity: .85; margin-top: 2px; }
+  #subtitle { position: absolute; bottom: 118px; left: 50%; transform: translateX(-50%); max-width: 720px; text-align: center;
+    font-size: 19px; font-weight: 600; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.8); }
+  #subtitle .who { color: #ffb3d9; }
+  #prompt { position: absolute; bottom: 210px; left: 50%; transform: translateX(-50%); background: rgba(10,8,14,.72);
+    border: 1px solid rgba(255,255,255,.6); border-radius: 8px; padding: 6px 14px; font-size: 15px; font-weight: 700; letter-spacing: .06em; }
+  #prompt b { color: #ffd23e; border: 1px solid #ffd23e; border-radius: 4px; padding: 0 6px; margin-right: 6px; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+    background: rgba(255,255,255,.92); box-shadow: 0 0 0 2px rgba(0,0,0,.35), 0 0 8px rgba(0,0,0,.4); }
+  #bustedwrap { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); width: 300px; text-align: center; }
+  #bustedlabel { font-size: 22px; font-weight: 900; letter-spacing: .3em; color: #7db4ff; text-shadow: 0 2px 8px rgba(0,0,0,.7); }
+  #bustedbar { height: 10px; margin-top: 6px; background: rgba(10,8,14,.6); border: 2px solid rgba(255,255,255,.7); border-radius: 6px; overflow: hidden; }
+  #bustedfill { height: 100%; width: 0%; background: #4d8dff; }
+  #toast { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 800;
+    color: #7dff8a; text-shadow: 0 2px 8px rgba(0,0,0,.7); opacity: 0; transition: opacity .3s; }
+  #dmgflash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(200,20,20,.45) 100%); opacity: 0; }
+
+  /* ---------- Menus ---------- */
+  .overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(38,14,44,.88), rgba(16,8,22,.94)); color: #fff; text-align: center; z-index: 5; }
+  .overlay h1 { font-size: 74px; margin: 0; letter-spacing: .04em; font-weight: 900;
+    background: linear-gradient(180deg, #ffe9a8, #ff9d5c 55%, #ff5d8f); -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: none; filter: drop-shadow(0 4px 14px rgba(255,120,80,.35)); }
+  .overlay h2 { font-size: 44px; margin: 0 0 6px; letter-spacing: .18em; font-weight: 900; }
+  .overlay .tag { font-size: 16px; letter-spacing: .34em; color: #ffd9ec; margin-top: 2px; }
+  .overlay .blurb { max-width: 620px; margin: 22px 20px 6px; font-size: 16.5px; line-height: 1.5; color: #f3e9f7; }
+  .overlay .controls { margin: 14px 0 4px; font-size: 13.5px; line-height: 1.75; color: #cdbfd8; letter-spacing: .04em; }
+  .overlay .controls b { color: #ffd23e; }
+  .btn { pointer-events: auto; cursor: pointer; margin-top: 14px; min-width: 250px; padding: 13px 30px; font-size: 19px; font-weight: 800;
+    letter-spacing: .14em; color: #241128; background: linear-gradient(180deg, #ffd23e, #ff9d5c); border: none; border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(255,150,60,.35); }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.ghost { background: rgba(255,255,255,.12); color: #fff; box-shadow: none; border: 1px solid rgba(255,255,255,.5); }
+  .btn:disabled { opacity: .35; cursor: default; box-shadow: none; }
+  #endcard h2.busted { color: #7db4ff; }
+  #endcard h2.wasted { color: #ff5d47; }
+  #endcard .fine { font-size: 18px; color: #ffd9d9; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .45s; z-index: 8; }
+  #vig { position: fixed; inset: 0; pointer-events: none; z-index: 2;
+    background: radial-gradient(ellipse at center, transparent 62%, rgba(20,4,24,.42) 100%); }
+  /* Read aloud, never shown: the status line screen readers announce. */
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Marlowe Bay: an open-world crime game. Drive and walk with W A S D, mouse to look, E to enter a car."></canvas>
+<div id="vig"></div>
+<div id="dmgflash"></div>
+
+<div id="hud" class="hidden">
+  <div id="topleft">
+    <div id="healthwrap"><div id="healthbar"></div></div>
+    <div id="armourline">REYES — MARLOWE BAY</div>
+    <div id="cash">$0 <small>CASH</small></div>
+  </div>
+  <div id="topright">
+    <div id="stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+    <div id="wantedlabel">WANTED LEVEL</div>
+    <div id="clock">18:04</div>
+  </div>
+  <div id="objective" class="hidden"></div>
+  <div id="toast"></div>
+  <div id="minimapwrap"><canvas id="minimap" width="384" height="384"></canvas></div>
+  <div id="bottomright">
+    <div id="speedo" class="hidden">0 <small>KM/H</small></div>
+    <div id="carname" class="hidden"></div>
+    <div id="weapon">PISTOL <span class="ammo">12 / 12</span></div>
+  </div>
+  <div id="subtitle" class="hidden"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="crosshair" class="hidden"></div>
+  <div id="bustedwrap" class="hidden">
+    <div id="bustedlabel">BUSTED</div>
+    <div id="bustedbar"><div id="bustedfill"></div></div>
+  </div>
+</div>
+
+<div id="menu" class="overlay">
+  <h1>MARLOWE BAY</h1>
+  <div class="tag">ONE CITY · ONE DRIVER · NO PERMISSION</div>
+  <p class="blurb">Reyes, a courier with an empty wallet, rolls into the sunset sprawl of Marlowe Bay.
+    Fixer Marla Venn has work for anyone who can drive: a package run, a nervous passenger, a borrowed
+    sports car, and one long escape. Take the jobs, dodge the interceptors, and make the bay yours —
+    or skip the story and steal something shiny.</p>
+  <button class="btn" id="btn-start">START NEW GAME</button>
+  <button class="btn ghost" id="btn-continue">CONTINUE</button>
+  <div class="controls">
+    <b>WASD</b> move / drive &nbsp;·&nbsp; <b>Mouse</b> look &amp; aim &nbsp;·&nbsp; <b>Click</b> shoot &nbsp;·&nbsp; <b>E</b> enter / exit car<br>
+    <b>Shift</b> sprint &nbsp;·&nbsp; <b>Space</b> handbrake &nbsp;·&nbsp; <b>R</b> reload &nbsp;·&nbsp; <b>Esc / P</b> pause &nbsp;·&nbsp; <b>M</b> mute
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <h2>PAUSED</h2>
+  <p class="blurb" id="pausestats">Marlowe Bay waits for no one. Except now.</p>
+  <button class="btn" id="btn-resume">RESUME</button>
+  <button class="btn ghost" id="btn-quit">SAVE &amp; TITLE</button>
+</div>
+
+<div id="endcard" class="overlay hidden">
+  <h2 id="endtitle">BUSTED</h2>
+  <p class="blurb" id="endtext"></p>
+  <p class="fine" id="endfine"></p>
+  <button class="btn" id="btn-respawn">BACK ON THE STREET</button>
+</div>
+
+<div id="fade"></div>
+<p id="status" role="status" aria-live="polite"></p>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.min.js"
+  }
+}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
